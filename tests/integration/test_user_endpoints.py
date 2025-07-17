@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db import Base, get_db
 from main import app
 
-# Use the test database URL
+# Use a test Postgres via Docker Compose or detached container
 TEST_DB_URL = "postgresql://postgres:postgres@localhost:5432/test_db"
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -31,7 +31,7 @@ def client():
     return TestClient(app)
 
 def test_register_and_duplicate(client):
-    # First registration must succeed with a 3+ char username
+    # First registration must succeed
     r1 = client.post("/register", json={
         "username": "usr1",
         "email": "usr1@x.com",
@@ -41,11 +41,11 @@ def test_register_and_duplicate(client):
     data = r1.json()
     assert data["username"] == "usr1"
 
-    # Duplicate registration should fail
+    # Duplicate registration should fail and return an "error" field
     dup = client.post("/register", json={
         "username": "usr1",
         "email": "usr1@x.com",
         "password": "pass1234"
     })
     assert dup.status_code == 400
-    assert "already registered" in dup.json()["detail"]
+    assert "already registered" in dup.json()["error"]
