@@ -216,19 +216,16 @@ docker run -it --rm <image-name>
 
 ---
 
-# 📝 7. Submission Instructions
+## Running Locally
 
-After finishing your work:
+source venv/bin/activate
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+uvicorn main:app --reload
 
-```bash
-git add .
-git commit -m "Complete Module X"
-git push origin main
-```
 
-Then submit the GitHub repository link as instructed.
 
 ---
+
 
 # 🔥 Useful Commands Cheat Sheet
 
