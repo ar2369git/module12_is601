@@ -1,5 +1,6 @@
 # app/schemas/user.py
 
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
@@ -11,9 +12,8 @@ class UserRead(BaseModel):
     id: int
     username: str
     email: EmailStr
-    created_at: str
+    created_at: datetime  # accept datetime directly
 
-    # Pydantic v2: enable from_orm-like behavior
     model_config = {
         "from_attributes": True
     }
