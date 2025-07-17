@@ -1,3 +1,5 @@
+# app/schemas/user.py
+
 from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
@@ -11,5 +13,7 @@ class UserRead(BaseModel):
     email: EmailStr
     created_at: str
 
-    class Config:
-        orm_mode = True
+    # Pydantic v2: enable from_orm-like behavior
+    model_config = {
+        "from_attributes": True
+    }
