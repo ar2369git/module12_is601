@@ -1,3 +1,5 @@
+# tests/integration/test_user_endpoints.py
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -5,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db import Base, get_db
 from main import app
 
-# Use a test Postgres via GitHub Actions service or local Docker
+# Use the test database URL
 TEST_DB_URL = "postgresql://postgres:postgres@localhost:5432/test_db"
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -29,20 +31,21 @@ def client():
     return TestClient(app)
 
 def test_register_and_duplicate(client):
-    # First registration
+    # First registration must succeed with a 3+ char username
     r1 = client.post("/register", json={
-        "username": "u1",
-        "email": "u1@x.com",
+        "username": "usr1",
+        "email": "usr1@x.com",
         "password": "pass1234"
     })
     assert r1.status_code == 200
     data = r1.json()
-    assert data["username"] == "u1"
-    # Duplicate should fail
-    r2 = client.post("/register", json={
-        "username": "u1",
-        "email": "u1@x.com",
+    assert data["username"] == "usr1"
+
+    # Duplicate registration should fail
+    dup = client.post("/register", json={
+        "username": "usr1",
+        "email": "usr1@x.com",
         "password": "pass1234"
     })
-    assert r2.status_code == 400
-    assert "already registered" in r2.json()["detail"]
+    assert dup.status_code == 400
+    assert "already registered" in dup.json()["detail"]
