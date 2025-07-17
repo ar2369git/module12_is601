@@ -40,3 +40,14 @@ sqlalchemy
 psycopg2-binary
 passlib[bcrypt]
 alembic
+requests
+pytest
+pytest-playwright
+
+# ─────────────────────────────────────────
+# Added for user model and validation:
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+pydantic[email]
+email-validator
