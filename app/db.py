@@ -1,17 +1,19 @@
 # app/db.py
+from pathlib import Path
 from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker, declarative_base
+
+BASE_DIR = Path(__file__).resolve().parent.parent  # app/
 
 DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
-    poolclass=NullPool,              # <- disable pooling so no stale schema
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -20,6 +22,9 @@ def get_db():
     finally:
         db.close()
 
+
 def init_db():
-    from app.models import user, calculation
+    from app.models import user, calculation  # noqa: F401
+    print("init_db() called")
     Base.metadata.create_all(bind=engine)
+    print("Tables after create_all:", Base.metadata.tables.keys())

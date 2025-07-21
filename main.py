@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.operations import add, subtract, multiply, divide
-from app.db import Base, get_db, init_db
+from app.db import get_db, init_db, Base
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 from app.security import hash_password
@@ -19,10 +19,9 @@ app = FastAPI()
 
 
 @app.on_event("startup")
-def startup() -> None:
-    """Create tables at startup."""
+def startup():
+    print("Startup handler running")
     init_db()
-    print("TABLES:", Base.metadata.tables.keys())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -141,23 +140,20 @@ async def divide_route(operation: OperationRequest):
 
 @app.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-    # Do NOT call init_db() here (startup already created tables)
-
     exists = db.query(User).filter(
-        (User.username == payload.username) |
-        (User.email == payload.email)
+        (User.username == payload.username) | (User.email == payload.email)
     ).first()
     if exists:
-        logger.warning("Attempt to register with existing username or email")
         raise HTTPException(status_code=400, detail="Username or email already registered")
 
-    hashed_pw = hash_password(payload.password)
-    user = User(username=payload.username, email=payload.email, password_hash=hashed_pw)
+    user = User(
+        username=payload.username,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
-
-    logger.info(f"Registered new user: {user.username}")
     return UserRead.from_orm(user)
 
 
