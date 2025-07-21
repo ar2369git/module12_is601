@@ -1,9 +1,7 @@
-# main.py
 import logging
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
@@ -11,20 +9,20 @@ from sqlalchemy.orm import Session
 from app.operations import add, subtract, multiply, divide
 from app.db import engine, Base, get_db, init_db
 from app.models.user import User
-from app.models.calculation import Calculation
 from app.schemas.user import UserCreate, UserRead
-from app.security import hash_password, verify_password
-from app.db import get_db, init_db
-
+from app.security import hash_password
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+
 @app.on_event("startup")
 def on_startup():
     init_db()
+    print("TABLES:", Base.metadata.tables.keys())
+
 
 @app.get("/", response_class=HTMLResponse)
 def homepage():
@@ -32,42 +30,46 @@ def homepage():
     <html>
       <body>
         <h1>Hello World</h1>
-        <input id="a" type="number" />
-        <input id="b" type="number" />
-        <button id="add">Add</button>
-        <button id="subtract">Subtract</button>
-        <button id="multiply">Multiply</button>
-        <button id="divide">Divide</button>
+        <form id="calculator-form">
+          <input id="a" name="a" type="number" />
+          <select name="type">
+            <option value="Add">Add</option>
+            <option value="Subtract">Subtract</option>
+            <option value="Multiply">Multiply</option>
+            <option value="Divide">Divide</option>
+          </select>
+          <input id="b" name="b" type="number" />
+          <button type="button" onclick="doOp('Add')">Add</button>
+          <button type="button" onclick="doOp('Subtract')">Subtract</button>
+          <button type="button" onclick="doOp('Multiply')">Multiply</button>
+          <button type="button" onclick="doOp('Divide')">Divide</button>
+        </form>
         <div id="result"></div>
         <script>
-          async function doOp(endpoint) {
+          async function doOp(type) {
             const a = parseFloat(document.getElementById('a').value);
             const b = parseFloat(document.getElementById('b').value);
-            const resp = await fetch('/' + endpoint, {
+            const resp = await fetch('/' + type.toLowerCase(), {
               method: 'POST',
-              headers: {'Content-Type': 'application/json'},
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({a, b})
             });
             const data = await resp.json();
-            const text = resp.ok ? `Calculation Result: ${data.result}` : `Error: ${data.error}`;
-            document.getElementById('result').textContent = text;
+            if (resp.ok) {
+              document.getElementById('result').textContent = 'Calculation Result: ' + data.result;
+            } else {
+              document.getElementById('result').textContent = 'Error: ' + data.error;
+            }
           }
-          document.getElementById('add').onclick = () => doOp('add');
-          document.getElementById('subtract').onclick = () => doOp('subtract');
-          document.getElementById('multiply').onclick = () => doOp('multiply');
-          document.getElementById('divide').onclick = () => doOp('divide');
         </script>
       </body>
     </html>
     """
 
 
-
-templates = Jinja2Templates(directory="templates")
-
 class OperationRequest(BaseModel):
-    a: float
-    b: float
+    a: float = Field(..., description="The first number")
+    b: float = Field(..., description="The second number")
 
     @field_validator("a", "b")
     def validate_numbers(cls, v):
@@ -75,22 +77,27 @@ class OperationRequest(BaseModel):
             raise ValueError("Both a and b must be numbers.")
         return v
 
+
 class OperationResponse(BaseModel):
-    result: float
+    result: float = Field(..., description="The result of the operation")
+
 
 class ErrorResponse(BaseModel):
-    error: str
+    error: str = Field(..., description="Error message")
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.error(f"HTTPException on {request.url.path}: {exc.detail}")
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_messages = "; ".join(f"{err['loc'][-1]}: {err['msg']}" for err in exc.errors())
     logger.error(f"ValidationError on {request.url.path}: {error_messages}")
     return JSONResponse(status_code=400, content={"error": error_messages})
+
 
 @app.post("/add", response_model=OperationResponse, responses={400: {"model": ErrorResponse}})
 async def add_route(operation: OperationRequest):
@@ -100,6 +107,7 @@ async def add_route(operation: OperationRequest):
         logger.error(f"Add Operation Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.post("/subtract", response_model=OperationResponse, responses={400: {"model": ErrorResponse}})
 async def subtract_route(operation: OperationRequest):
     try:
@@ -108,6 +116,7 @@ async def subtract_route(operation: OperationRequest):
         logger.error(f"Subtract Operation Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.post("/multiply", response_model=OperationResponse, responses={400: {"model": ErrorResponse}})
 async def multiply_route(operation: OperationRequest):
     try:
@@ -115,6 +124,7 @@ async def multiply_route(operation: OperationRequest):
     except Exception as e:
         logger.error(f"Multiply Operation Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/divide", response_model=OperationResponse, responses={400: {"model": ErrorResponse}})
 async def divide_route(operation: OperationRequest):
@@ -127,25 +137,29 @@ async def divide_route(operation: OperationRequest):
         logger.error(f"Divide Operation Internal Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
 @app.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
+    # Ensure tables exist (safety net for tests)
+    init_db()
+
     exists = db.query(User).filter(
-        (User.username == payload.username) | (User.email == payload.email)
+        (User.username == payload.username) |
+        (User.email == payload.email)
     ).first()
     if exists:
         logger.warning("Attempt to register with existing username or email")
         raise HTTPException(status_code=400, detail="Username or email already registered")
 
-    user = User(
-        username=payload.username,
-        email=payload.email,
-        password_hash=hash_password(payload.password)
-    )
+    hashed_pw = hash_password(payload.password)
+    user = User(username=payload.username, email=payload.email, password_hash=hashed_pw)
     db.add(user)
     db.commit()
     db.refresh(user)
+
     logger.info(f"Registered new user: {user.username}")
     return UserRead.from_orm(user)
+
 
 if __name__ == "__main__":  # pragma: no cover
     uvicorn.run(app, host="127.0.0.1", port=8000)
