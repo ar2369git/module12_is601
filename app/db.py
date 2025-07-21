@@ -1,27 +1,33 @@
 # app/db.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent  # app/
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+    DATABASE_URL,
     connect_args={"check_same_thread": False},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-from app.models.user import User          # noqa: F401,E402
-from app.models.calculation import Calculation  # noqa: F401,E402
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
 
 def get_db():
-    # Ensure tables exist before every session (cheap no-op after first time)
-    init_db()
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def init_db():
+    """
+    Import all model modules so that they register with SQLAlchemy's Base
+    *before* calling create_all. This guarantees the tables exist.
+    """
+    # Import models here (local import to avoid circulars)
+    from app.models import user, calculation  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
