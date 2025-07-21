@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.operations import add, subtract, multiply, divide
-from app.db import get_db, init_db, Base
+from app.db import get_db, init_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 from app.security import hash_password
