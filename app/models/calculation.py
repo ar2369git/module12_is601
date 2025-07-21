@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Float, String, ForeignKey, Enum, func, DateTime
+# app/models/calculation.py
+from sqlalchemy import Column, Integer, Enum, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db import Base
 import enum
@@ -16,10 +17,6 @@ class Calculation(Base):
     a = Column(Float, nullable=False)
     b = Column(Float, nullable=False)
     type = Column(Enum(CalculationType), nullable=False)
-    # Optionally store result, or compute on demand via @property
     result = Column(Float, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # If you want to link to a user:
-    # user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    # user = relationship("User", back_populates="calculations")
+    # optional user_id example:
+    # user_id = Column(Integer, ForeignKey("users.id"))

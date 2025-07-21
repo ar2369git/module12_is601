@@ -1,17 +1,27 @@
+# app/db.py
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Use DATABASE_URL env var or default to local Postgres
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/postgres"
+# Create the Base **here** so other modules can import it
+Base = declarative_base()
+
+# Pick a database URL:
+db_url = (
+    os.getenv("TEST_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
 )
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-Base = declarative_base()
+# Fallback to local sqlite if nothing set
+if not db_url:
+    db_url = "sqlite:///./test.db"
+
+# Needed for SQLite; ignored by Postgres
+connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+
+engine = create_engine(db_url, connect_args=connect_args)
+
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 def get_db():
     db = SessionLocal()
