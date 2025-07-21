@@ -3,6 +3,12 @@ import time
 import pytest
 import requests
 from playwright.sync_api import sync_playwright
+from fastapi.testclient import TestClient
+from main import app  # this imports after engine/DB defined
+from sqlalchemy import inspect
+
+
+
 
 @pytest.fixture(scope="session")
 def fastapi_server():
@@ -33,3 +39,10 @@ def page(browser, fastapi_server):
     page = browser.new_page()
     yield page
     page.close()
+
+@pytest.fixture
+def client():
+    with TestClient(app) as c:
+        yield c
+
+   

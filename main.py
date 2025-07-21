@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.operations import add, subtract, multiply, divide
-from app.db import engine, Base, get_db, init_db
+from app.db import Base, get_db, init_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 from app.security import hash_password
@@ -19,7 +19,8 @@ app = FastAPI()
 
 
 @app.on_event("startup")
-def on_startup():
+def startup() -> None:
+    """Create tables at startup."""
     init_db()
     print("TABLES:", Base.metadata.tables.keys())
 
@@ -140,8 +141,7 @@ async def divide_route(operation: OperationRequest):
 
 @app.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 async def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-    # Ensure tables exist (safety net for tests)
-    init_db()
+    # Do NOT call init_db() here (startup already created tables)
 
     exists = db.query(User).filter(
         (User.username == payload.username) |
