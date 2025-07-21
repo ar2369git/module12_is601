@@ -1,6 +1,5 @@
 # tests/integration/test_user_endpoints.py
-
-import pytest
+import os, pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,8 +7,8 @@ from app.db import Base, get_db
 from main import app
 
 # Use a test Postgres via Docker Compose or detached container
-TEST_DB_URL = "postgresql://postgres:postgres@localhost:5432/test_db"
-engine = create_engine(TEST_DB_URL)
+TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
+engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False} if TEST_DB_URL.startswith("sqlite") else {})
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 @pytest.fixture(scope="session", autouse=True)
