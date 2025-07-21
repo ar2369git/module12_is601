@@ -1,27 +1,23 @@
 # app/db.py
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Create the Base **here** so other modules can import it
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Pick a database URL:
-db_url = (
-    os.getenv("TEST_DATABASE_URL")
-    or os.getenv("DATABASE_URL")
-)
+def init_db():
+    # Import models so they are registered with Base before create_all
+    from app.models.user import User          # noqa: F401
+    from app.models.calculation import Calculation  # noqa: F401
+    Base.metadata.create_all(bind=engine)
 
-# Fallback to local sqlite if nothing set
-if not db_url:
-    db_url = "sqlite:///./test.db"
-
-# Needed for SQLite; ignored by Postgres
-connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
-
-engine = create_engine(db_url, connect_args=connect_args)
-
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+# Ensure tables exist immediately (for TestClient usage)
+init_db()
 
 def get_db():
     db = SessionLocal()
