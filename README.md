@@ -29,6 +29,7 @@ If you see a version number, you're good to go.
 
 # 🧩 2. Install and Configure Git
 
+
 ## Install Git
 
 - **MacOS (using Homebrew)**
