@@ -1,7 +1,8 @@
 import logging
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Depends, Header
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
+from fastapi import status
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, field_validator
 from typing import List
@@ -160,7 +161,6 @@ async def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
     ).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid credentials")
-    # For simplicity, token is the username
     token = user.username
     return {"token": token}
 
@@ -188,7 +188,6 @@ async def create_calculation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Compute the result
     if payload.type == CalculationType.Add:
         result = add(payload.a, payload.b)
     elif payload.type == CalculationType.Subtract:
@@ -239,18 +238,17 @@ async def update_calculation(
     db.refresh(calc)
     return calc
 
-@app.delete("/calculations/{calc_id}", responses={404: {"model": ErrorResponse},401: {"model": ErrorResponse}})
+@app.delete("/calculations/{calc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_calculation(
     calc_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     calc = db.query(CalculationModel).filter(CalculationModel.id == calc_id).first()
     if not calc:
         raise HTTPException(status_code=404, detail="Calculation not found")
     db.delete(calc)
     db.commit()
-    return {"message": "Calculation deleted"}
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 if __name__ == "__main__":  # pragma: no cover
     uvicorn.run(app, host="127.0.0.1", port=8000)
