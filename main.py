@@ -40,10 +40,42 @@ def homepage():
     <html>
       <body>
         <h1>Hello World</h1>
-        <p>See /docs for API.</p>
+        <form id="calculator-form">
+          <input id="a" name="a" type="number" />
+          <select name="type">
+            <option value="Add">Add</option>
+            <option value="Subtract">Subtract</option>
+            <option value="Multiply">Multiply</option>
+            <option value="Divide">Divide</option>
+          </select>
+          <input id="b" name="b" type="number" />
+          <button type="button" onclick="doOp('Add')">Add</button>
+          <button type="button" onclick="doOp('Subtract')">Subtract</button>
+          <button type="button" onclick="doOp('Multiply')">Multiply</button>
+          <button type="button" onclick="doOp('Divide')">Divide</button>
+        </form>
+        <div id="result"></div>
+        <script>
+          async function doOp(type) {
+            const a = document.getElementById('a').value;
+            const b = document.getElementById('b').value;
+            const resp = await fetch('/' + type.toLowerCase(), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({a: parseFloat(a), b: parseFloat(b)})
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+              document.getElementById('result').textContent = 'Calculation Result: ' + data.result;
+            } else {
+              document.getElementById('result').textContent = 'Error: ' + data.error;
+            }
+          }
+        </script>
       </body>
     </html>
     """
+
 
 
 # ----- Legacy calculator operation endpoints (kept so existing tests still pass) -----
