@@ -61,4 +61,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/module11_is601:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/module12_is601:latest
