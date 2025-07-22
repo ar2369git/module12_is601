@@ -1,11 +1,15 @@
-# app/db.py
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "test.db"
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+# if we're testing, use in-memory DB
+if os.getenv("TESTING"):
+    DATABASE_URL = "sqlite:///:memory:"
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent  # .../app
+    DB_PATH = BASE_DIR / "test.db"
+    DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,
@@ -24,5 +28,9 @@ def get_db():
 
 
 def init_db():
-    from app.models import user, calculation  # noqa
+    # import models so SQLAlchemy registers them
+    from app.models import user, calculation  # noqa: F401
+
+    print("init_db() called")
     Base.metadata.create_all(bind=engine)
+    print("Tables after create_all:", Base.metadata.tables.keys())
